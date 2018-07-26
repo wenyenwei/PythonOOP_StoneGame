@@ -28,10 +28,14 @@ class Player:
 		return True if action == '0' else False
 
 	def addPlayer(self):
+		print("+ Press 0 to go back to menu +")
 		userInput = input("Please enter new player username: ")
+		# go back to menu
+		if Player.goBackToMenu(self, userInput):
+			StoneGame._menu(self)
 		# check username is not existed
 		if Player.authentication(self, userInput):
-			print("User exists, please try other username.")
+			print("!!! ERROR: username exists, please try again or press 0 to go back to menu. !!!")
 			Player.addPlayer(self)
 		# add to collection
 		else: 
@@ -40,10 +44,11 @@ class Player:
 			StoneGame._goBackToMenu(self)
 
 	def displayPlayer(self):
+		sorted_collection = Player.sortByValue(self, Player.playersCollection)
 		print("------------- Records ---------------")
 		print("--- Player ------ Winning Rate ------")
-		for player in Player.playersCollection:
-			print("  {:<20}{}%".format(player, Player.playersCollection[player]["rate"]))
+		for player, rate in sorted_collection:
+			print("  {:<20}{}%".format(player, rate))
 		print("-----------------------------------")
 		StoneGame._goBackToMenu(self)
 
@@ -51,11 +56,14 @@ class Player:
 		return float(Player.playersCollection[player]["wins"]) / float(Player.playersCollection[player]["total games"]) * 100 if not Player.playersCollection[player]["total games"] == 0 else 0
 
 	def sortByValue(self, dict):
-		sorted_by_value = sorted(dict.items(), key=lambda kv: kv[1][2], reverse=True)
+		new_dict = {}
+		for player in dict:
+			new_dict[player] = dict[player]["rate"]
+		return sorted(new_dict.items(), key=lambda kv: kv[1], reverse=True)
 
 
 class Game:
-	__currentIsPlayer1 = True
+	_currentIsPlayer1 = True
 
 
 	def __init__(self):
@@ -104,6 +112,14 @@ class Game:
 		Game.endGame(self, Game.returnCurrentPlayer(self))
 		
 
+	# stone amount validator
+	def stoneAmountValidator(self, num):
+		if num > int(self.gameSettings["upper bound"]) or num < 1:
+			print("Stone amount has to be lower than {}. Please try again.".format(self.gameSettings["upper bound"]))
+			return False
+		else: 
+			return True
+
 	# display current stone
 	def stoneController(self):
 		print("Current stone amount: {}".format(self.gameSettings["current amount"]), end=" ")
@@ -113,7 +129,7 @@ class Game:
 
 	# return current player
 	def returnCurrentPlayer(self):
-		return "player1" if Game.__currentIsPlayer1 else "player2"
+		return "player1" if Game._currentIsPlayer1 else "player2"
 
 	# display and switch player
 	def playerController(self):
@@ -121,13 +137,16 @@ class Game:
 		currentPlayer = Game.returnCurrentPlayer(self)
 		print("{}'s turn!".format(self.gameSettings[currentPlayer]))
 		# switch player
-		Game.__currentIsPlayer1 = not Game.__currentIsPlayer1
+		Game._currentIsPlayer1 = not Game._currentIsPlayer1
 
 	# calculate stone
 	def stoneReducer(self):
 		try:
 			stoneToReduce = int(input("Please enter stone amount: "))
-			self.gameSettings["current amount"] = int(self.gameSettings["current amount"]) - stoneToReduce
+			if Game.stoneAmountValidator(self, stoneToReduce):
+				self.gameSettings["current amount"] = int(self.gameSettings["current amount"]) - stoneToReduce
+			else:
+				Game.stoneReducer(self)
 		except ValueError:
 			print("!!! Invalid input. Please try again. !!!")
 			Game.stoneReducer(self)
@@ -148,10 +167,78 @@ class Game:
 
 	# update record after game
 	def __processRecord(self, username, win):
-		Player.playersCollection[username]["total games"] += 1
-		if win:
-			Player.playersCollection[username]["wins"] += 1
-		Player.playersCollection[username]["rate"] = Player.calculateWinsRate(self, username)
+		if not username == "Computer AI":
+			Player.playersCollection[username]["total games"] += 1
+			if win:
+				Player.playersCollection[username]["wins"] += 1
+			Player.playersCollection[username]["rate"] = Player.calculateWinsRate(self, username)
+		else: 
+			pass
+
+
+class GameWithAI(Game):
+	def __init__(self):
+		self.gameSettings = {}
+		GameWithAI.initSettings(self)
+
+	def initSettings(self):
+		self.gameSettings["player1"] = Player().setPlayerForThisGame(1)
+		self.gameSettings["player2"] = "Computer AI"
+		try:
+			self.gameSettings["total amount"] = input("Please enter total stone amount: ")
+			self.gameSettings["upper bound"] = input("Please enter stone upper bound: ")
+		except ValueError:
+			print("!!! Invalid input. Please try again.")
+			self.gameSettings["total amount"] = input("Please enter total stone amount: ")
+			self.gameSettings["upper bound"] = input("Please enter stone upper bound: ")
+		# sort dict after all inputs entered
+		self.gameSettings = collections.OrderedDict(sorted(self.gameSettings.items()))
+		# start game
+		GameWithAI.gameStart(self)
+
+	def gameStart(self):
+		# set current stone amount to original amount
+		self.gameSettings["current amount"] = self.gameSettings["total amount"]
+		# display game info and then start game
+		print("------------ GAME INFO ------------")
+		for item in self.gameSettings:
+			print("|  {}: {}".format(item, self.gameSettings[item])) 
+		print("------------ GAME START -----------")
+		# set current stone amount to original amount
+		self.gameSettings["current amount"] = self.gameSettings["total amount"]
+		# start game process
+		GameWithAI.gameProcessor(self)
+
+	def gameProcessor(self):
+		while int(self.gameSettings["current amount"]) > 0:		
+			# display current stone amount
+			Game.stoneController(self)
+			# display current player
+			Game.playerController(self)
+			# Call stone reducer to calculate stone amount
+			if not Game._currentIsPlayer1:
+				GameWithAI.stoneReducer(self)
+			else:				
+				self.gameSettings["current amount"] = int(self.gameSettings["current amount"]) - GameWithAI.AIPickNumber(self)
+		# end game function
+		GameWithAI.endGame(self, GameWithAI.returnCurrentPlayer(self))
+
+	def AIPickNumber(self):
+		winNumList = GameWithAI.winNumList(self)
+		currentAccumAmount = int(self.gameSettings["total amount"]) - int(self.gameSettings["current amount"])
+		for num in winNumList:
+			if num > currentAccumAmount and winNumList[winNumList.index(num) + 1] < currentAccumAmount:
+				return num - currentAccumAmount
+			else: 
+				return int(self.gameSettings["upper bound"])
+
+	def winNumList(self):
+	    winNumList = []
+	    remainStoneAmount = int(self.gameSettings["total amount"]) -1
+	    while remainStoneAmount >= 0:
+	      winNumList.append(remainStoneAmount)
+	      remainStoneAmount = remainStoneAmount - (int(self.gameSettings["upper bound"]) + 1)
+	    return winNumList;
 
 class StoneGame:
 	'main game system'
@@ -159,7 +246,7 @@ class StoneGame:
 		try:
 			Player.playersCollection = json.load(open("records.txt", "r"))
 		except:
-			print("!!! ERROR: failed to open records file or file doesn't existreverse=True. !!!")
+			print("!!! ERROR: failed to open records file or file doesn't exist. !!!")
 			pass
 
 	def main(self):
@@ -203,7 +290,7 @@ class StoneGame:
 		elif userActionInput == '3':
 			Player().addPlayer()
 		elif userActionInput == '4':
-			pass
+			GameWithAI()
 		elif userActionInput == '5':
 			print("Bye!")
 			StoneGame.__saveToFile(self)

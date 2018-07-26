@@ -1,1 +1,1 @@
-{"aaa": {"total games": 4, "wins": 3, "rate": 75.0}, "bbb": {"total games": 4, "wins": 1, "rate": 25.0}}
+{"cc": {"total games": 3, "wins": 2, "rate": 66.66666666666666}, "aaa": {"total games": 4, "wins": 3, "rate": 75.0}, "bbb": {"total games": 4, "wins": 1, "rate": 25.0}, "ammy": {"total games": 2, "wins": 0, "rate": 0.0}}
