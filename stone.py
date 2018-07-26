@@ -1,8 +1,9 @@
 import collections
 import json
+import unittest
+
 class Player:
-	'game players'
-	playersCollection = {}
+	playersCollection = {'aaa': {'total games': 0, 'wins': 0, 'rate': 0}}
 				
 	def setPlayerForThisGame(self, index):
 		# ask for username
@@ -241,7 +242,6 @@ class GameWithAI(Game):
 	    return winNumList;
 
 class StoneGame:
-	'main game system'
 	def __init__(self):
 		try:
 			Player.playersCollection = json.load(open("records.txt", "r"))
@@ -303,9 +303,5 @@ class StoneGame:
 		f = open("records.txt", "w")
 		f.write(str(Player.playersCollection).replace("'", '"'))
 
-
-
-
-
-newGame = StoneGame().main()
-
+if __name__ == '__main__':
+	newGame = StoneGame().main()
