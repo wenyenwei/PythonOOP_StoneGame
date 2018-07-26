@@ -1,0 +1,1 @@
+{"aaa": {"total games": 4, "wins": 3, "rate": 75.0}, "bbb": {"total games": 4, "wins": 1, "rate": 25.0}}
